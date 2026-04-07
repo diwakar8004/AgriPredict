@@ -1,0 +1,141 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@200;300;400;500;600;700&display=swap');
+
+:root {
+  /* Colors */
+  --bg-primary: #07170d;
+  --bg-secondary: #0f1f15;
+  --bg-lowest: #031108;
+  --bg-bright: #2c3d31;
+  
+  --primary: #00ffcc;
+  --primary-glow: #00725a;
+  --secondary: #fecb00;
+  --accent-cyan: #00e0b3;
+  --accent-amber: #f1c100;
+  
+  --text-primary: #f0f0f0;
+  --text-secondary: #b9cbc2;
+  --text-muted: #83958d;
+  --on-primary: #00382b;
+  
+  /* Gradints */
+  --gradient-biolume: linear-gradient(135deg, var(--primary) 0%, var(--primary-glow) 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(22, 42, 30, 0.4) 0%, rgba(10, 26, 16, 0.2) 100%);
+  
+  /* Shadows & Depth */
+  --glass-blur: 12px;
+  --ambient-glow: 0px 20px 40px rgba(0, 224, 179, 0.08);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --active-border: 1px solid var(--primary);
+  
+  /* Sizing */
+  --card-radius: 16px;
+  --pill-radius: 9999px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Manrope', sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .display {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.glass-card {
+  background: var(--gradient-glass);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: var(--glass-border);
+  border-radius: var(--card-radius);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(0, 255, 204, 0.3);
+  box-shadow: var(--ambient-glow);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 2rem;
+  background: var(--gradient-biolume);
+  color: var(--on-primary);
+  border: none;
+  border-radius: var(--pill-radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.4);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 2rem;
+  background: transparent;
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 255, 204, 0.2);
+  border-radius: var(--pill-radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-ghost:hover {
+  background: rgba(0, 255, 204, 0.05);
+  border-color: var(--primary);
+}
+
+.text-gradient {
+  background: var(--gradient-biolume);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+.animate-pulse-slow {
+  animation: pulse 4s infinite ease-in-out;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-lowest);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bg-bright);
+}
