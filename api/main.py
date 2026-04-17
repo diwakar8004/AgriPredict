@@ -78,6 +78,18 @@ class ModelsContainer:
 # Global instance
 models_container = ModelsContainer()
 
+# Load models at startup
+print("Loading models at startup...")
+models_container.load()
+print(f"✓ Models loaded: {list(models_container.models.keys())}")
+sys.stdout.flush()
+
+# Load models at startup
+print("Loading models at startup...")
+models_container.load()
+print(f"✓ Models loaded: {list(models_container.models.keys())}")
+sys.stdout.flush()
+
 FEATURE_NAMES = {
     'irrigation': ['Soil_Type', 'Soil_pH', 'Soil_Moisture', 'Organic_Carbon', 'Electrical_Conductivity', 'Temperature_C', 'Humidity', 'Rainfall_mm', 'Sunlight_Hours', 'Wind_Speed_kmh', 'Crop_Type', 'Crop_Growth_Stage', 'Season', 'Irrigation_Type', 'Water_Source', 'Field_Area_hectare', 'Previous_Irrigation_mm', 'Region', 'Mulching_Used_Yes'],
     'sustainability': ['Soil_pH', 'Soil_Moisture', 'Temperature_C', 'Rainfall_mm', 'Fertilizer_Usage_kg', 'Pesticide_Usage_kg', 'Crop_Yield_ton', 'Crop_Type_Corn', 'Crop_Type_Rice', 'Crop_Type_Soybean', 'Crop_Type_Wheat'],
@@ -108,8 +120,9 @@ def load_models():
 def ensure_models_loaded():
     """Ensure models are loaded before any request."""
     if not models_container.models:
-        print("⚠ Models not loaded, loading now...")
+        print("⚠ Models not loaded at startup, loading now...")
         models_container.load()
+        print(f"✓ Models loaded: {list(models_container.models.keys())}")
 
 @app.route('/predict', methods=['POST', 'OPTIONS'])
 def predict():
