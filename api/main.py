@@ -6,6 +6,7 @@ import pandas as pd
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from model_loader import create_mock_models
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, 
@@ -17,6 +18,52 @@ CORS(app, resources={r"/*": {"origins": "*"}},
 APP_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(APP_DIR, os.pardir))
 MODELS_BASE_DIR = PROJECT_ROOT
+
+# Use a class to manage models to avoid global state issues
+class ModelsContainer:
+    def __init__(self):
+        self.models = {}
+    
+    def load(self):
+        """Load or create models."""
+        if self.models:  # Already loaded
+            return
+        
+        print("Loading models...")
+        try:
+            self.models['irrigation'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Irrigation_need/stack_model_classifier.joblib"))
+            self.models['sustainability'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Sustainability_score/xgb_new_sustainable_score.pkl"))
+            self.models['market'] = joblib.load(os.path.join(MODELS_BASE_DIR, "market_price/xgb_markert_price_new.pkl"))
+            self.models['yield'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Yield/stack_Yield_model.joblib"))
+            self.models['crop'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Crop_recomendation/crop_new_recomendation.pkl"))
+            print(f"✓ Loaded real models: {list(self.models.keys())}")
+        except Exception as e:
+            print(f"⚠ Failed to load real models: {e}")
+            print("Creating fallback models...")
+            try:
+                self.models.update(create_mock_models())
+                print(f"✓ Loaded fallback models: {list(self.models.keys())}")
+            except Exception as e2:
+                print(f"⚠ Fallback failed: {e2}")
+                self._create_minimal_models()
+    
+    def _create_minimal_models(self):
+        """Absolute fallback: create minimal sklearn models."""
+        print("Creating minimal sklearn models...")
+        np.random.seed(42)
+        X = np.random.rand(50, 19)
+        models_dict = {
+            'irrigation': RandomForestClassifier(n_estimators=2, random_state=42).fit(X, np.random.randint(0, 2, 50)),
+            'sustainability': RandomForestRegressor(n_estimators=2, random_state=42).fit(X, np.random.rand(50) * 100),
+            'market': RandomForestRegressor(n_estimators=2, random_state=42).fit(X, np.random.rand(50) * 100),
+            'yield': RandomForestRegressor(n_estimators=2, random_state=42).fit(X, np.random.rand(50) * 100),
+            'crop': RandomForestClassifier(n_estimators=2, random_state=42).fit(X, np.random.randint(0, 22, 50)),
+        }
+        self.models.update(models_dict)
+        print(f"✓ Minimal models created: {list(self.models.keys())}")
+
+# Global instance
+models_container = ModelsContainer()
 
 FEATURE_NAMES = {
     'irrigation': ['Soil_Type', 'Soil_pH', 'Soil_Moisture', 'Organic_Carbon', 'Electrical_Conductivity', 'Temperature_C', 'Humidity', 'Rainfall_mm', 'Sunlight_Hours', 'Wind_Speed_kmh', 'Crop_Type', 'Crop_Growth_Stage', 'Season', 'Irrigation_Type', 'Water_Source', 'Field_Area_hectare', 'Previous_Irrigation_mm', 'Region', 'Mulching_Used_Yes'],
@@ -37,39 +84,9 @@ CROP_MAPPING = {
 models = {}
 
 def load_models():
-    global models
-    print("Attempting to load models...")
-    try:
-        print("Attempting to load real models...")
-        models['irrigation'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Irrigation_need/stack_model_classifier.joblib"))
-        models['sustainability'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Sustainability_score/xgb_new_sustainable_score.pkl"))
-        models['market'] = joblib.load(os.path.join(MODELS_BASE_DIR, "market_price/xgb_markert_price_new.pkl"))
-        models['yield'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Yield/stack_Yield_model.joblib"))
-        models['crop'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Crop_recomendation/crop_new_recomendation.pkl"))
-        print(f"✓ All models loaded: {list(models.keys())}")
-    except Exception as e:
-        print(f"⚠ Error loading models: {e}")
-        print("Creating fallback mock models...")
-        try:
-            mock_models = create_mock_models()
-            models.update(mock_models)
-            print(f"✓ Fallback models loaded: {list(models.keys())}")
-        except Exception as e2:
-            print(f"✗ Even fallback failed: {e2}")
-            # Force create minimal models
-            print("Creating minimal models...")
-            np.random.seed(42)
-            X_dummy = np.random.rand(100, 19)
-            y_class = np.random.randint(0, 2, 100)
-            y_crop = np.random.randint(0, 22, 100)
-            y_reg = np.random.rand(100) * 100
-            
-            models['irrigation'] = RandomForestClassifier(n_estimators=3, random_state=42).fit(X_dummy, y_class)
-            models['sustainability'] = RandomForestRegressor(n_estimators=3, random_state=42).fit(X_dummy, y_reg)
-            models['market'] = RandomForestRegressor(n_estimators=3, random_state=42).fit(X_dummy, y_reg)
-            models['yield'] = RandomForestRegressor(n_estimators=3, random_state=42).fit(X_dummy, y_reg)
-            models['crop'] = RandomForestClassifier(n_estimators=3, random_state=42).fit(X_dummy, y_crop)
-            print(f"✓ Minimal models created: {list(models.keys())}")
+    """Public API to load models."""
+    models_container.load()
+
 
 
 
@@ -77,29 +94,27 @@ def load_models():
 @app.before_request
 def ensure_models_loaded():
     """Ensure models are loaded before any request."""
-    global models
-    if not models or len(models) == 0:
+    if not models_container.models:
         print("⚠ Models not loaded, loading now...")
-        load_models()
+        models_container.load()
 
 @app.route('/predict', methods=['POST', 'OPTIONS'])
 def predict():
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
     
-    global models
-    # Safety check
-    if not models:
-        load_models()
+    # Ensure models are loaded
+    if not models_container.models:
+        models_container.load()
     
     data = request.json
     model_name = data.get('model')
     inputs = data.get('inputs')
 
-    if model_name not in models:
+    if model_name not in models_container.models:
         return jsonify({"error": f"Model {model_name} not found"}), 404
 
-    model = models[model_name]
+    model = models_container.models[model_name]
     feature_list = FEATURE_NAMES[model_name]
     
     try:
@@ -199,32 +214,31 @@ def predict():
 def health():
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
+    if not models_container.models:
+        models_container.load()
     return jsonify({
         "status": "ready", 
-        "models": list(models.keys()),
-        "model_count": len(models),
-        "debug": f"Models dict id: {id(models)}"
+        "models": list(models_container.models.keys()),
+        "model_count": len(models_container.models)
     })
 
 @app.route('/debug/models', methods=['GET'])
 def debug_models():
     """Debug endpoint to check model status"""
-    global models
-    if not models or len(models) == 0:
-        # Try to load again
-        load_models()
+    if not models_container.models:
+        models_container.load()
     return jsonify({
-        "models_loaded": list(models.keys()),
-        "count": len(models),
+        "models_loaded": list(models_container.models.keys()),
+        "count": len(models_container.models),
         "project_root": MODELS_BASE_DIR
     })
 
 
 if __name__ == '__main__':
-    print("=" * 50)
+    print("=" * 60)
     print("AGRIPREDICT BACKEND INITIALIZING")
-    print("=" * 50)
+    print("=" * 60)
     load_models()
-    print(f"✓ Server ready with models: {list(models.keys())}")
-    print("=" * 50)
+    print(f"✓ Server ready with models: {list(models_container.models.keys())}")
+    print("=" * 60)
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5001)), debug=False)
