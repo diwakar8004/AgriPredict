@@ -30,7 +30,7 @@ sys.stdout.flush()
 
 APP_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(APP_DIR, os.pardir))
-MODELS_BASE_DIR = PROJECT_ROOT
+MODELS_BASE_DIR = APP_DIR
 
 # Use a class to manage models to avoid global state issues
 class ModelsContainer:

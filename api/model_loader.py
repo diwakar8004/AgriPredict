@@ -21,11 +21,11 @@ def create_mock_models():
         project_root = os.path.dirname(base_dir)
         
         model_paths = {
-            'irrigation': os.path.join(project_root, "Irrigation_need/stack_model_classifier.joblib"),
-            'sustainability': os.path.join(project_root, "Sustainability_score/xgb_new_sustainable_score.pkl"),
-            'market': os.path.join(project_root, "market_price/xgb_markert_price_new.pkl"),
-            'yield': os.path.join(project_root, "Yield/stack_Yield_model.joblib"),
-            'crop': os.path.join(project_root, "Crop_recomendation/crop_new_recomendation.pkl"),
+            'irrigation': os.path.join(base_dir, "Irrigation_need/stack_model_classifier.joblib"),
+            'sustainability': os.path.join(base_dir, "Sustainability_score/xgb_new_sustainable_score.pkl"),
+            'market': os.path.join(base_dir, "market_price/xgb_markert_price_new.pkl"),
+            'yield': os.path.join(base_dir, "Yield/stack_Yield_model.joblib"),
+            'crop': os.path.join(base_dir, "Crop_recomendation/crop_new_recomendation.pkl"),
         }
         
         for name, path in model_paths.items():
