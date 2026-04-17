@@ -7,7 +7,11 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}}, 
+     methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type", "Accept", "Authorization"],
+     expose_headers=["Content-Type"],
+     supports_credentials=False)
 
 APP_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(APP_DIR, os.pardir))
@@ -42,8 +46,11 @@ def load_models():
     except Exception as e:
         print(f"Error loading models: {e}")
 
-@app.route('/predict', methods=['POST'])
+@app.route('/predict', methods=['POST', 'OPTIONS'])
 def predict():
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
+    
     data = request.json
     model_name = data.get('model')
     inputs = data.get('inputs')
@@ -147,8 +154,10 @@ def predict():
         print(traceback_str)
         return jsonify({"error": str(e)}), 400
 
-@app.route('/health', methods=['GET'])
+@app.route('/health', methods=['GET', 'OPTIONS'])
 def health():
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
     return jsonify({"status": "ready", "models": list(models.keys())})
 
 if __name__ == '__main__':

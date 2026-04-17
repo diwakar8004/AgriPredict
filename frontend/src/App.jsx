@@ -254,9 +254,16 @@ function App() {
 
   const checkApi = async () => {
     try {
-      await axios.get(`${API_BASE}/health`);
+      const response = await axios.get(`${API_BASE}/health`);
+      console.log('API Health Check:', response.data);
       setApiStatus('online');
     } catch (e) {
+      console.error('API Health Check Failed:', {
+        message: e.message,
+        status: e.response?.status,
+        data: e.response?.data,
+        url: e.config?.url
+      });
       setApiStatus('offline');
     }
   };
@@ -269,14 +276,23 @@ function App() {
     setLoading(true);
     setError(null);
     try {
+      console.log('Sending prediction request:', { model: selectedModel.id, inputs });
       await new Promise(r => setTimeout(r, 1500)); // Cinematic "Compute" time
       const response = await axios.post(`${API_BASE}/predict`, {
         model: selectedModel.id,
         inputs: inputs
       });
+      console.log('Prediction response:', response.data);
       setPrediction(response.data.prediction);
     } catch (e) {
-      setError(e.response?.data?.error || 'Intelligence engine offline');
+      const errorMsg = e.response?.data?.error || e.message || 'Intelligence engine offline';
+      console.error('Prediction Error:', {
+        message: e.message,
+        status: e.response?.status,
+        data: e.response?.data,
+        url: e.config?.url
+      });
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
