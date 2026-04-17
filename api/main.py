@@ -7,13 +7,6 @@ import pandas as pd
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-try:
-    from .model_loader import create_mock_models
-except Exception as e:
-    print(f"⚠ Failed to import model_loader: {e}")
-    def create_mock_models():
-        return {}
-
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
 app = Flask(__name__)
@@ -114,21 +107,6 @@ CROP_MAPPING = {
     15: 'muskmelon', 16: 'orange', 17: 'papaya', 18: 'pigeonpeas', 
     19: 'pomegranate', 20: 'rice', 21: 'watermelon'
 }
-
-models = {}
-
-def load_models():
-    """Public API to load models."""
-    models_container.load()
-
-
-
-
-
-@app.before_request
-def ensure_models_loaded():
-    """No longer needed - models load on demand."""
-    pass
 
 @app.route('/predict', methods=['POST', 'OPTIONS'])
 def predict():
