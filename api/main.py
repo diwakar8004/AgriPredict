@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 try:
-    from model_loader import create_mock_models
+    from .model_loader import create_mock_models
 except Exception as e:
     print(f"⚠ Failed to import model_loader: {e}")
     def create_mock_models():
