@@ -36,49 +36,65 @@ MODELS_BASE_DIR = APP_DIR
 class ModelsContainer:
     def __init__(self):
         self.models = {}
-        self._loaded = False
+        self._loaded_models = set()  # Track which models are loaded
     
-    def load(self):
-        """Load or create models."""
-        if self._loaded:  # Already loaded
-            return
+    def load_model(self, model_name):
+        """Load a specific model on demand."""
+        if model_name in self._loaded_models:
+            return  # Already loaded
         
-        print("Loading models...")
+        print(f"Loading model: {model_name}")
         try:
-            self.models['irrigation'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Irrigation_need/stack_model_classifier.joblib"))
-            self.models['sustainability'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Sustainability_score/xgb_new_sustainable_score.pkl"))
-            self.models['market'] = joblib.load(os.path.join(MODELS_BASE_DIR, "market_price/xgb_markert_price_new.pkl"))
-            self.models['yield'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Yield/stack_Yield_model.joblib"))
-            self.models['crop'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Crop_recomendation/crop_new_recomendation.pkl"))
-            print(f"✓ Loaded real models: {list(self.models.keys())}")
-            self._loaded = True
+            model_paths = {
+                'irrigation': os.path.join(MODELS_BASE_DIR, "Irrigation_need/stack_model_classifier.joblib"),
+                'sustainability': os.path.join(MODELS_BASE_DIR, "Sustainability_score/xgb_new_sustainable_score.pkl"),
+                'market': os.path.join(MODELS_BASE_DIR, "market_price/xgb_markert_price_new.pkl"),
+                'yield': os.path.join(MODELS_BASE_DIR, "Yield/stack_Yield_model.joblib"),
+                'crop': os.path.join(MODELS_BASE_DIR, "Crop_recomendation/crop_new_recomendation.pkl"),
+            }
+            
+            path = model_paths.get(model_name)
+            if not path or not os.path.exists(path):
+                raise FileNotFoundError(f"Model file not found: {path}")
+            
+            ext = os.path.splitext(path)[1]
+            if ext == '.joblib':
+                self.models[model_name] = joblib.load(path)
+            elif ext == '.pkl':
+                with open(path, 'rb') as f:
+                    self.models[model_name] = pickle.load(f)
+            
+            self._loaded_models.add(model_name)
+            print(f"✓ Loaded model: {model_name}")
+            
         except Exception as e:
-            print(f"⚠ Failed to load real models: {e}")
-            print("Creating fallback models...")
-            try:
-                self.models.update(create_mock_models())
-                print(f"✓ Loaded fallback models: {list(self.models.keys())}")
-                self._loaded = True
-            except Exception as e2:
-                print(f"⚠ Fallback failed: {e2}")
-                self._create_minimal_models()
-                self._loaded = True
+            print(f"⚠ Failed to load {model_name}: {e}")
+            print(f"Creating fallback for {model_name}...")
+            self._create_fallback_model(model_name)
     
-    def _create_minimal_models(self):
-        """Absolute fallback: create minimal sklearn models."""
-        print("Creating minimal sklearn models...")
+    def _create_fallback_model(self, model_name):
+        """Create a minimal fallback model for a specific model."""
+        from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+        import numpy as np
+        
         np.random.seed(42)
-        X = np.random.rand(50, 19)
-        models_dict = {
-            'irrigation': RandomForestClassifier(n_estimators=2, random_state=42).fit(X, np.random.randint(0, 2, 50)),
-            'sustainability': RandomForestRegressor(n_estimators=2, random_state=42).fit(X, np.random.rand(50) * 100),
-            'market': RandomForestRegressor(n_estimators=2, random_state=42).fit(X, np.random.rand(50) * 100),
-            'yield': RandomForestRegressor(n_estimators=2, random_state=42).fit(X, np.random.rand(50) * 100),
-            'crop': RandomForestClassifier(n_estimators=2, random_state=42).fit(X, np.random.randint(0, 22, 50)),
-        }
-        self.models.update(models_dict)
-        print(f"✓ Minimal models created: {list(self.models.keys())}")
-        self._loaded = True
+        X = np.random.rand(50, 5)  # Minimal features
+        
+        if model_name == 'irrigation':
+            self.models[model_name] = RandomForestClassifier(n_estimators=2, random_state=42).fit(X, np.random.randint(0, 2, 50))
+        elif model_name in ['sustainability', 'market', 'yield']:
+            self.models[model_name] = RandomForestRegressor(n_estimators=2, random_state=42).fit(X, np.random.rand(50) * 100)
+        elif model_name == 'crop':
+            self.models[model_name] = RandomForestClassifier(n_estimators=2, random_state=42).fit(X, np.random.randint(0, 22, 50))
+        
+        self._loaded_models.add(model_name)
+        print(f"✓ Created fallback model: {model_name}")
+    
+    def get_model(self, model_name):
+        """Get a model, loading it if necessary."""
+        if model_name not in self._loaded_models:
+            self.load_model(model_name)
+        return self.models.get(model_name)
 
 # Global instance - models will be loaded lazily on first access
 models_container = ModelsContainer()
@@ -111,26 +127,23 @@ def load_models():
 
 @app.before_request
 def ensure_models_loaded():
-    """Ensure models are loaded before any request."""
-    if not models_container._loaded:
-        print("⚠ Models not loaded yet, loading now...")
-        models_container.load()
-        print(f"✓ Models loaded: {list(models_container.models.keys())}")
+    """No longer needed - models load on demand."""
+    pass
 
 @app.route('/predict', methods=['POST', 'OPTIONS'])
 def predict():
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
     
-    # Models are ensured to be loaded by before_request
     data = request.json
     model_name = data.get('model')
     inputs = data.get('inputs')
 
-    if model_name not in models_container.models:
+    # Get model (loads it if necessary)
+    model = models_container.get_model(model_name)
+    if model is None:
         return jsonify({"error": f"Model {model_name} not found"}), 404
 
-    model = models_container.models[model_name]
     feature_list = FEATURE_NAMES[model_name]
     
     try:
@@ -230,20 +243,20 @@ def predict():
 def health():
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
-    # Models are ensured to be loaded by before_request
     return jsonify({
         "status": "ready", 
-        "models": list(models_container.models.keys()),
-        "model_count": len(models_container.models)
+        "loaded_models": list(models_container._loaded_models),
+        "available_models": list(FEATURE_NAMES.keys()),
+        "loaded_count": len(models_container._loaded_models)
     })
 
 @app.route('/debug/models', methods=['GET'])
 def debug_models():
     """Debug endpoint to check model status"""
-    # Models are ensured to be loaded by before_request
     return jsonify({
-        "models_loaded": list(models_container.models.keys()),
-        "count": len(models_container.models),
+        "loaded_models": list(models_container._loaded_models),
+        "available_models": list(FEATURE_NAMES.keys()),
+        "loaded_count": len(models_container._loaded_models),
         "project_root": MODELS_BASE_DIR
     })
 
