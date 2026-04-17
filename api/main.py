@@ -188,7 +188,10 @@ def debug_models():
 
 
 if __name__ == '__main__':
-    print("Initializing backend...")
+    print("=" * 50)
+    print("AGRIPREDICT BACKEND INITIALIZING")
+    print("=" * 50)
     load_models()
-    print(f"Starting server with models: {list(models.keys())}")
+    print(f"✓ Server ready with models: {list(models.keys())}")
+    print("=" * 50)
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5001)), debug=False)
