@@ -38,6 +38,7 @@ models = {}
 
 def load_models():
     global models
+    print("Attempting to load models...")
     try:
         print("Attempting to load real models...")
         models['irrigation'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Irrigation_need/stack_model_classifier.joblib"))
@@ -49,8 +50,27 @@ def load_models():
     except Exception as e:
         print(f"⚠ Error loading models: {e}")
         print("Creating fallback mock models...")
-        models.update(create_mock_models())
-        print(f"✓ Fallback models loaded: {list(models.keys())}")
+        try:
+            mock_models = create_mock_models()
+            models.update(mock_models)
+            print(f"✓ Fallback models loaded: {list(models.keys())}")
+        except Exception as e2:
+            print(f"✗ Even fallback failed: {e2}")
+            # Force create minimal models
+            print("Creating minimal models...")
+            np.random.seed(42)
+            X_dummy = np.random.rand(100, 19)
+            y_class = np.random.randint(0, 2, 100)
+            y_crop = np.random.randint(0, 22, 100)
+            y_reg = np.random.rand(100) * 100
+            
+            models['irrigation'] = RandomForestClassifier(n_estimators=3, random_state=42).fit(X_dummy, y_class)
+            models['sustainability'] = RandomForestRegressor(n_estimators=3, random_state=42).fit(X_dummy, y_reg)
+            models['market'] = RandomForestRegressor(n_estimators=3, random_state=42).fit(X_dummy, y_reg)
+            models['yield'] = RandomForestRegressor(n_estimators=3, random_state=42).fit(X_dummy, y_reg)
+            models['crop'] = RandomForestClassifier(n_estimators=3, random_state=42).fit(X_dummy, y_crop)
+            print(f"✓ Minimal models created: {list(models.keys())}")
+
 
 
 
