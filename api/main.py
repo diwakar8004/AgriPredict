@@ -163,7 +163,26 @@ def predict():
 def health():
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
-    return jsonify({"status": "ready", "models": list(models.keys())})
+    return jsonify({
+        "status": "ready", 
+        "models": list(models.keys()),
+        "model_count": len(models),
+        "debug": f"Models dict id: {id(models)}"
+    })
+
+@app.route('/debug/models', methods=['GET'])
+def debug_models():
+    """Debug endpoint to check model status"""
+    global models
+    if not models or len(models) == 0:
+        # Try to load again
+        load_models()
+    return jsonify({
+        "models_loaded": list(models.keys()),
+        "count": len(models),
+        "project_root": MODELS_BASE_DIR
+    })
+
 
 if __name__ == '__main__':
     load_models()
