@@ -8,6 +8,8 @@ import os
 import pickle
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+import warnings
+warnings.filterwarnings('ignore')
 
 def create_mock_models():
     """Create simple mock models for testing when actual models aren't available."""
@@ -28,39 +30,51 @@ def create_mock_models():
         
         for name, path in model_paths.items():
             if os.path.exists(path):
-                ext = os.path.splitext(path)[1]
-                if ext == '.joblib':
-                    models[name] = joblib.load(path)
-                elif ext == '.pkl':
-                    with open(path, 'rb') as f:
-                        models[name] = pickle.load(f)
-                print(f"✓ Loaded real model: {name}")
-            else:
-                print(f"⚠ Model not found: {path}")
+                try:
+                    ext = os.path.splitext(path)[1]
+                    if ext == '.joblib':
+                        models[name] = joblib.load(path)
+                    elif ext == '.pkl':
+                        with open(path, 'rb') as f:
+                            models[name] = pickle.load(f)
+                    print(f"✓ Loaded real model: {name}")
+                except Exception as e:
+                    print(f"⚠ Failed to load {name}: {e}")
         
-        # If we got some models, return them
-        if models:
+        # If we got all models, return them
+        if len(models) == 5:
             return models
+        else:
+            print(f"⚠ Only {len(models)}/5 models loaded, using fallback")
             
     except Exception as e:
         print(f"Error loading models: {e}")
     
-    # Create fallback mock models
-    print("⚠ Using mock models for testing")
+    # Create fallback mock models for any missing ones
+    print("Creating mock models for deployment testing...")
     
     # Simple classifiers/regressors for demo
-    X_dummy = np.random.rand(100, 10)
+    np.random.seed(42)
+    X_dummy = np.random.rand(100, 19)  # Generic features
     y_class = np.random.randint(0, 2, 100)
+    y_crop = np.random.randint(0, 22, 100)
     y_reg = np.random.rand(100) * 100
     
-    models['irrigation'] = RandomForestClassifier(n_estimators=10, random_state=42).fit(X_dummy, y_class)
-    models['sustainability'] = RandomForestRegressor(n_estimators=10, random_state=42).fit(X_dummy, y_reg)
-    models['market'] = RandomForestRegressor(n_estimators=10, random_state=42).fit(X_dummy, y_reg)
-    models['yield'] = RandomForestRegressor(n_estimators=10, random_state=42).fit(X_dummy, y_reg)
-    models['crop'] = RandomForestClassifier(n_estimators=10, random_state=42).fit(X_dummy, np.random.randint(0, 22, 100))
+    if 'irrigation' not in models:
+        models['irrigation'] = RandomForestClassifier(n_estimators=5, random_state=42).fit(X_dummy, y_class)
+    if 'sustainability' not in models:
+        models['sustainability'] = RandomForestRegressor(n_estimators=5, random_state=42).fit(X_dummy, y_reg)
+    if 'market' not in models:
+        models['market'] = RandomForestRegressor(n_estimators=5, random_state=42).fit(X_dummy, y_reg)
+    if 'yield' not in models:
+        models['yield'] = RandomForestRegressor(n_estimators=5, random_state=42).fit(X_dummy, y_reg)
+    if 'crop' not in models:
+        models['crop'] = RandomForestClassifier(n_estimators=5, random_state=42).fit(X_dummy, y_crop)
     
+    print(f"✓ Available models: {list(models.keys())}")
     return models
 
 if __name__ == '__main__':
     mods = create_mock_models()
-    print(f"Available models: {list(mods.keys())}")
+    print(f"Models loaded: {list(mods.keys())}")
+
