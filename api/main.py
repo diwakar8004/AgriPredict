@@ -9,7 +9,9 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-MODELS_BASE_DIR = "/Users/diwakar/Desktop/models"
+APP_DIR = os.path.dirname(__file__)
+PROJECT_ROOT = os.path.abspath(os.path.join(APP_DIR, os.pardir))
+MODELS_BASE_DIR = PROJECT_ROOT
 
 FEATURE_NAMES = {
     'irrigation': ['Soil_Type', 'Soil_pH', 'Soil_Moisture', 'Organic_Carbon', 'Electrical_Conductivity', 'Temperature_C', 'Humidity', 'Rainfall_mm', 'Sunlight_Hours', 'Wind_Speed_kmh', 'Crop_Type', 'Crop_Growth_Stage', 'Season', 'Irrigation_Type', 'Water_Source', 'Field_Area_hectare', 'Previous_Irrigation_mm', 'Region', 'Mulching_Used_Yes'],
@@ -141,8 +143,8 @@ def predict():
     except Exception as e:
         print(f"Prediction Error for {model_name}: {e}")
         import traceback
-        traceback.get_val = traceback.format_exc()
-        print(traceback.get_val)
+        traceback_str = traceback.format_exc()
+        print(traceback_str)
         return jsonify({"error": str(e)}), 400
 
 @app.route('/health', methods=['GET'])
@@ -151,4 +153,4 @@ def health():
 
 if __name__ == '__main__':
     load_models()
-    app.run(port=5001, debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5001)), debug=True)
