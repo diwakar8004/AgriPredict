@@ -1,19 +1,32 @@
 import os
+import sys
 import joblib
 import pickle
 import numpy as np
 import pandas as pd
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from model_loader import create_mock_models
+
+try:
+    from model_loader import create_mock_models
+except Exception as e:
+    print(f"⚠ Failed to import model_loader: {e}")
+    def create_mock_models():
+        return {}
+
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
 app = Flask(__name__)
+print(f"Flask app created: {app}")
+sys.stdout.flush()
+
 CORS(app, resources={r"/*": {"origins": "*"}}, 
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type", "Accept", "Authorization"],
      expose_headers=["Content-Type"],
      supports_credentials=False)
+print("CORS configured")
+sys.stdout.flush()
 
 APP_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(APP_DIR, os.pardir))
