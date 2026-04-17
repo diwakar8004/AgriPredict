@@ -39,17 +39,20 @@ models = {}
 def load_models():
     global models
     try:
+        print("Attempting to load real models...")
         models['irrigation'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Irrigation_need/stack_model_classifier.joblib"))
         models['sustainability'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Sustainability_score/xgb_new_sustainable_score.pkl"))
         models['market'] = joblib.load(os.path.join(MODELS_BASE_DIR, "market_price/xgb_markert_price_new.pkl"))
         models['yield'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Yield/stack_Yield_model.joblib"))
         models['crop'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Crop_recomendation/crop_new_recomendation.pkl"))
-        print("All models loaded successfully.")
+        print(f"✓ All models loaded: {list(models.keys())}")
     except Exception as e:
-        print(f"Error loading models: {e}")
-        print("Falling back to mock models...")
-        models = create_mock_models()
-        print(f"Mock models loaded: {list(models.keys())}")
+        print(f"⚠ Error loading models: {e}")
+        print("Creating fallback mock models...")
+        models.update(create_mock_models())
+        print(f"✓ Fallback models loaded: {list(models.keys())}")
+
+
 
 @app.route('/predict', methods=['POST', 'OPTIONS'])
 def predict():
@@ -185,5 +188,7 @@ def debug_models():
 
 
 if __name__ == '__main__':
+    print("Initializing backend...")
     load_models()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5001)), debug=True)
+    print(f"Starting server with models: {list(models.keys())}")
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5001)), debug=False)
