@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from model_loader import create_mock_models
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, 
@@ -36,6 +37,7 @@ CROP_MAPPING = {
 models = {}
 
 def load_models():
+    global models
     try:
         models['irrigation'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Irrigation_need/stack_model_classifier.joblib"))
         models['sustainability'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Sustainability_score/xgb_new_sustainable_score.pkl"))
@@ -45,6 +47,9 @@ def load_models():
         print("All models loaded successfully.")
     except Exception as e:
         print(f"Error loading models: {e}")
+        print("Falling back to mock models...")
+        models = create_mock_models()
+        print(f"Mock models loaded: {list(models.keys())}")
 
 @app.route('/predict', methods=['POST', 'OPTIONS'])
 def predict():
