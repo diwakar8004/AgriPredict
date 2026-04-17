@@ -243,12 +243,15 @@ def predict():
 def health():
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
-    return jsonify({
-        "status": "ready", 
-        "loaded_models": list(models_container._loaded_models),
-        "available_models": list(FEATURE_NAMES.keys()),
-        "loaded_count": len(models_container._loaded_models)
-    })
+    try:
+        # Simple health check without loading models
+        return jsonify({
+            "status": "ready", 
+            "message": "API is running",
+            "available_models": list(FEATURE_NAMES.keys())
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/debug/models', methods=['GET'])
 def debug_models():
