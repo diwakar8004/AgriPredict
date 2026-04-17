@@ -54,10 +54,23 @@ def load_models():
 
 
 
+@app.before_request
+def ensure_models_loaded():
+    """Ensure models are loaded before any request."""
+    global models
+    if not models or len(models) == 0:
+        print("⚠ Models not loaded, loading now...")
+        load_models()
+
 @app.route('/predict', methods=['POST', 'OPTIONS'])
 def predict():
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
+    
+    global models
+    # Safety check
+    if not models:
+        load_models()
     
     data = request.json
     model_name = data.get('model')
