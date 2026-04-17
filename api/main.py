@@ -36,10 +36,11 @@ MODELS_BASE_DIR = APP_DIR
 class ModelsContainer:
     def __init__(self):
         self.models = {}
+        self._loaded = False
     
     def load(self):
         """Load or create models."""
-        if self.models:  # Already loaded
+        if self._loaded:  # Already loaded
             return
         
         print("Loading models...")
@@ -50,15 +51,18 @@ class ModelsContainer:
             self.models['yield'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Yield/stack_Yield_model.joblib"))
             self.models['crop'] = joblib.load(os.path.join(MODELS_BASE_DIR, "Crop_recomendation/crop_new_recomendation.pkl"))
             print(f"✓ Loaded real models: {list(self.models.keys())}")
+            self._loaded = True
         except Exception as e:
             print(f"⚠ Failed to load real models: {e}")
             print("Creating fallback models...")
             try:
                 self.models.update(create_mock_models())
                 print(f"✓ Loaded fallback models: {list(self.models.keys())}")
+                self._loaded = True
             except Exception as e2:
                 print(f"⚠ Fallback failed: {e2}")
                 self._create_minimal_models()
+                self._loaded = True
     
     def _create_minimal_models(self):
         """Absolute fallback: create minimal sklearn models."""
@@ -74,21 +78,10 @@ class ModelsContainer:
         }
         self.models.update(models_dict)
         print(f"✓ Minimal models created: {list(self.models.keys())}")
+        self._loaded = True
 
-# Global instance
+# Global instance - models will be loaded lazily on first access
 models_container = ModelsContainer()
-
-# Load models at startup
-print("Loading models at startup...")
-models_container.load()
-print(f"✓ Models loaded: {list(models_container.models.keys())}")
-sys.stdout.flush()
-
-# Load models at startup
-print("Loading models at startup...")
-models_container.load()
-print(f"✓ Models loaded: {list(models_container.models.keys())}")
-sys.stdout.flush()
 
 FEATURE_NAMES = {
     'irrigation': ['Soil_Type', 'Soil_pH', 'Soil_Moisture', 'Organic_Carbon', 'Electrical_Conductivity', 'Temperature_C', 'Humidity', 'Rainfall_mm', 'Sunlight_Hours', 'Wind_Speed_kmh', 'Crop_Type', 'Crop_Growth_Stage', 'Season', 'Irrigation_Type', 'Water_Source', 'Field_Area_hectare', 'Previous_Irrigation_mm', 'Region', 'Mulching_Used_Yes'],
@@ -119,8 +112,8 @@ def load_models():
 @app.before_request
 def ensure_models_loaded():
     """Ensure models are loaded before any request."""
-    if not models_container.models:
-        print("⚠ Models not loaded at startup, loading now...")
+    if not models_container._loaded:
+        print("⚠ Models not loaded yet, loading now...")
         models_container.load()
         print(f"✓ Models loaded: {list(models_container.models.keys())}")
 
@@ -129,10 +122,7 @@ def predict():
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
     
-    # Ensure models are loaded
-    if not models_container.models:
-        models_container.load()
-    
+    # Models are ensured to be loaded by before_request
     data = request.json
     model_name = data.get('model')
     inputs = data.get('inputs')
@@ -240,8 +230,7 @@ def predict():
 def health():
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
-    if not models_container.models:
-        models_container.load()
+    # Models are ensured to be loaded by before_request
     return jsonify({
         "status": "ready", 
         "models": list(models_container.models.keys()),
@@ -251,8 +240,7 @@ def health():
 @app.route('/debug/models', methods=['GET'])
 def debug_models():
     """Debug endpoint to check model status"""
-    if not models_container.models:
-        models_container.load()
+    # Models are ensured to be loaded by before_request
     return jsonify({
         "models_loaded": list(models_container.models.keys()),
         "count": len(models_container.models),
@@ -262,9 +250,8 @@ def debug_models():
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("AGRIPREDICT BACKEND INITIALIZING (v2)")
+    print("AGRIPREDICT BACKEND INITIALIZING (v2 - LAZY LOADING)")
     print("=" * 60)
-    load_models()
-    print(f"✓ Server ready with models: {list(models_container.models.keys())}")
+    print("✓ Server ready (models will load on first request)")
     print("=" * 60)
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5001)), debug=False)
