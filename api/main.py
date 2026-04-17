@@ -236,7 +236,7 @@ def debug_models():
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("AGRIPREDICT BACKEND INITIALIZING")
+    print("AGRIPREDICT BACKEND INITIALIZING (v2)")
     print("=" * 60)
     load_models()
     print(f"✓ Server ready with models: {list(models_container.models.keys())}")
